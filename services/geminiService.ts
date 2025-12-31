@@ -2,22 +2,18 @@
 import { GoogleGenAI } from "@google/genai";
 import { ParTeaPost } from "../types";
 
-const API_KEY = process.env.API_KEY || "";
-
 export const searchParties = async (
   lat: number,
   lng: number,
   query: string = "popular parties, nightclubs, or social events tonight"
 ): Promise<{ text: string; posts: ParTeaPost[] }> => {
-  if (!API_KEY) {
-    throw new Error("API Key is missing");
-  }
-
-  const ai = new GoogleGenAI({ apiKey: API_KEY });
+  // Always use a named parameter and obtain the API key exclusively from process.env.API_KEY.
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY as string });
   
-  // Maps grounding is only supported in Gemini 2.5 series models
+  // Maps grounding is only supported in Gemini 2.5 series models.
+  // Using 'gemini-2.5-flash' which is the recommended 2.5 series model for this task.
   const response = await ai.models.generateContent({
-    model: "gemini-2.5-flash-latest",
+    model: "gemini-2.5-flash",
     contents: `Find ${query} near latitude ${lat}, longitude ${lng}. 
     Please list the events. For each event, provide:
     1. Title
@@ -39,11 +35,12 @@ export const searchParties = async (
     },
   });
 
-  const text = response.text;
+  // Extracting text output from GenerateContentResponse using the .text property.
+  const text = response.text || "";
   const groundingChunks = response.candidates?.[0]?.groundingMetadata?.groundingChunks || [];
 
-  // Parse the response to create mock-ish posts enriched with grounding data
-  // Since we can't use responseSchema with googleMaps, we manually parse or map grounding results
+  // Parse the response to create mock-ish posts enriched with grounding data.
+  // We manually iterate through groundingChunks as responseSchema is not allowed with googleMaps.
   const posts: ParTeaPost[] = groundingChunks
     .filter((chunk: any) => chunk.maps)
     .map((chunk: any, index: number) => {
@@ -54,7 +51,7 @@ export const searchParties = async (
         description: `Join us at ${mapInfo.title}! Check out the details on Google Maps.`,
         location: {
           name: mapInfo.title,
-          latitude: lat + (Math.random() - 0.5) * 0.01, // Approximate since chunks don't always give precise lat/lng directly
+          latitude: lat + (Math.random() - 0.5) * 0.01,
           longitude: lng + (Math.random() - 0.5) * 0.01,
           uri: mapInfo.uri
         },

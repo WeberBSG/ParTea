@@ -5,6 +5,7 @@ import ParTeaCard from './components/ParTeaCard';
 import Menu from './components/Menu';
 import CreateParTea from './components/CreateParTea';
 import Profile from './components/Profile';
+import SearchMap from './components/SearchMap';
 import { searchParties } from './services/geminiService';
 
 const App: React.FC = () => {
@@ -13,6 +14,7 @@ const App: React.FC = () => {
   const [posts, setPosts] = useState<ParTeaPost[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
 
   // Initial mock data
   const initialPosts: ParTeaPost[] = [
@@ -37,7 +39,6 @@ const App: React.FC = () => {
   ];
 
   const handleLogin = () => {
-    // Mock login
     const mockUser: User = {
       id: 'u1',
       name: 'Tea Enthusiast',
@@ -74,6 +75,7 @@ const App: React.FC = () => {
         navigator.geolocation.getCurrentPosition(
           async (position) => {
             const { latitude, longitude } = position.coords;
+            setUserLocation({ lat: latitude, lng: longitude });
             try {
               const result = await searchParties(latitude, longitude);
               if (result.posts.length > 0) {
@@ -108,14 +110,12 @@ const App: React.FC = () => {
     }
   }, [view, fetchParties]);
 
-  // Filter posts created by the current user
   const userPosts = user 
     ? posts.filter(p => p.username === user.name.replace(/\s+/g, '').toLowerCase()) 
     : [];
 
   return (
     <div className="relative w-full h-screen flex justify-center items-center bg-slate-950 p-4 overflow-hidden">
-      {/* 9:16 aspect ratio container (Phone Simulation) */}
       <div 
         className="relative bg-slate-900 shadow-[0_0_50px_-12px_rgba(236,72,153,0.3)] border-4 border-slate-800 rounded-[3rem] overflow-hidden"
         style={{ width: 'min(1080px, calc(100vh * 9 / 16))', height: 'min(1920px, 92vh)', aspectRatio: '9/16' }}
@@ -150,7 +150,7 @@ const App: React.FC = () => {
         </header>
 
         {/* View Rendering */}
-        <div className="h-full w-full overflow-y-auto px-6 pt-24 pb-12 scrollbar-hide">
+        <div className={`h-full w-full ${view !== 'search' ? 'overflow-y-auto px-6 pt-24 pb-12' : ''} scrollbar-hide`}>
           {view === 'home' ? (
             <div className="h-full flex flex-col items-center justify-center gap-12 text-center animate-in fade-in slide-in-from-bottom-8 duration-700">
               <div className="flex flex-col items-center">
@@ -195,22 +195,21 @@ const App: React.FC = () => {
               onLogout={handleLogout}
               onUpdateUser={handleUpdateUser}
             />
+          ) : view === 'search' ? (
+            <SearchMap 
+              posts={posts} 
+              userLocation={userLocation} 
+              onBack={() => setView('feed')} 
+            />
           ) : (
             <div className="flex flex-col animate-in fade-in duration-500">
-              {view === 'search' && (
-                <div className="mb-6 bg-slate-800/50 p-4 rounded-2xl border border-slate-700/50">
-                  <h2 className="text-lg font-bold mb-1">Searching Nearby...</h2>
-                  <p className="text-xs text-slate-400">Using Google Maps grounding to find current events.</p>
-                </div>
-              )}
-
               {loading ? (
-                <div className="flex flex-col items-center justify-center py-20 gap-4">
+                <div className="flex flex-col items-center justify-center py-40 gap-4">
                   <div className="w-12 h-12 border-4 border-pink-500/20 border-t-pink-500 rounded-full animate-spin"></div>
-                  <p className="text-slate-400 animate-pulse">Brewing your ParTea list...</p>
+                  <p className="text-slate-400 animate-pulse font-medium">Mixing your ParTea list...</p>
                 </div>
               ) : error ? (
-                <div className="bg-red-900/20 border border-red-500/30 p-6 rounded-2xl text-center">
+                <div className="bg-red-900/20 border border-red-500/30 p-6 rounded-2xl text-center mt-10">
                   <i className="fa-solid fa-circle-exclamation text-red-500 text-3xl mb-4"></i>
                   <p className="text-red-200 text-sm mb-4">{error}</p>
                   <button 
@@ -236,7 +235,7 @@ const App: React.FC = () => {
         </div>
 
         {/* Bottom indicator */}
-        <div className="absolute bottom-2 left-1/2 -translate-x-1/2 w-24 h-1 bg-slate-700 rounded-full opacity-50"></div>
+        <div className="absolute bottom-2 left-1/2 -translate-x-1/2 w-24 h-1 bg-slate-700 rounded-full opacity-50 z-50"></div>
       </div>
     </div>
   );
