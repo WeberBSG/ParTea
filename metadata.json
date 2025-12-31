@@ -1,0 +1,7 @@
+{
+  "name": "ParTea",
+  "description": "A mobile-first application for discovering local parties and nightlife events using Google Maps grounding.",
+  "requestFramePermissions": [
+    "geolocation"
+  ]
+}
